@@ -369,10 +369,6 @@ static __always_inline int extract_l4_port(struct __ctx_buff *ctx, __u8 nexthdr,
 			return ret;
 		break;
 
-	case IPPROTO_ICMPV6:
-	case IPPROTO_ICMP:
-		break;
-
 	default:
 		/* Pass unknown L4 to stack */
 		return DROP_UNKNOWN_L4;
@@ -408,7 +404,7 @@ static __always_inline int reverse_map_l4_port(struct __ctx_buff *ctx, __u8 next
 
 	case IPPROTO_ICMPV6:
 	case IPPROTO_ICMP:
-		break;
+		return CTX_ACT_OK;
 
 	default:
 		return DROP_UNKNOWN_L4;
