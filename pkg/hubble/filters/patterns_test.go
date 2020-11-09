@@ -108,3 +108,58 @@ func TestCompileFQDNPattern(t *testing.T) {
 		})
 	}
 }
+
+func TestCompileNodeNamePatterns(t *testing.T) {
+	type test struct {
+		name            string
+		nodeNames       []string
+		wantErr         bool
+		wantErrContains string
+		want            string
+	}
+
+	tests := []test{
+		{
+			name:      "literal",
+			nodeNames: []string{"runtime1"},
+			want:      `\A(?:runtime1)\z`,
+		},
+		{
+			name:      "literals",
+			nodeNames: []string{"runtime1", "test-cluster/k8s1"},
+			want:      `\A(?:runtime1|test-cluster/k8s1)\z`,
+		},
+		{
+			name:      "doublestar",
+			nodeNames: []string{"cluster-name/**"},
+			want:      `\A(?:cluster-name/(?:[\-0-9a-z]+(?:\.(?:[\-0-9a-z]+))*))\z`,
+		},
+		{
+			name:      "complex_pattern",
+			nodeNames: []string{"runtime1.domain.com", "test-cluster/k8s*"},
+			want:      `\A(?:runtime1\.domain\.com|test-cluster/k8s[\-0-9a-z]*)\z`,
+		},
+		{
+			name:            "invalid_byte",
+			nodeNames:       []string{"_"},
+			wantErr:         true,
+			wantErrContains: "'_': invalid byte in node name pattern",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, err := compileNodeNamePattern(tt.nodeNames)
+			if tt.wantErr {
+				require.Error(t, err)
+				if tt.wantErrContains != "" {
+					assert.Contains(t, err.Error(), tt.wantErrContains)
+				}
+				assert.Nil(t, got)
+				return
+			}
+			require.NoError(t, err)
+			assert.Equal(t, tt.want, got.String())
+		})
+	}
+}

@@ -58,6 +58,36 @@ func appendFQDNPatternRegexp(sb *strings.Builder, fqdnPattern string) error {
 	return nil
 }
 
+// appendNodeNamePatternRegexp appends the regular expression equivalent to
+// nodeNamePattern to sb.
+func appendNodeNamePatternRegexp(sb *strings.Builder, nodeNamePattern string) error {
+	for i := 0; i < len(nodeNamePattern); i++ {
+		b := nodeNamePattern[i]
+		switch {
+		case b == '.':
+			sb.WriteString(`\.`)
+		case b == '*':
+			if i < len(nodeNamePattern)-1 && nodeNamePattern[i+1] == '*' {
+				i++
+				sb.WriteString(`(?:[\-0-9a-z]+(?:\.(?:[\-0-9a-z]+))*)`)
+			} else {
+				sb.WriteString(`[\-0-9a-z]*`)
+			}
+		case b == '-':
+			fallthrough
+		case b == '/':
+			fallthrough
+		case '0' <= b && b <= '9':
+			fallthrough
+		case 'a' <= b && b <= 'z':
+			sb.WriteByte(b)
+		default:
+			return fmt.Errorf("%q: invalid byte in node name pattern", b)
+		}
+	}
+	return nil
+}
+
 // compileFQDNPattern returns a regular expression equivalent to the FQDN
 // patterns in fqdnPatterns.
 func compileFQDNPattern(fqdnPatterns []string) (*regexp.Regexp, error) {
@@ -68,6 +98,23 @@ func compileFQDNPattern(fqdnPatterns []string) (*regexp.Regexp, error) {
 			sb.WriteByte('|')
 		}
 		if err := appendFQDNPatternRegexp(&sb, fqdnPattern); err != nil {
+			return nil, err
+		}
+	}
+	sb.WriteString(`)\z`)
+	return regexp.Compile(sb.String())
+}
+
+// compileNodeNamePattern returns a regular expression equivalent to the node
+// name patterns in nodeNamePatterns.
+func compileNodeNamePattern(nodeNamePatterns []string) (*regexp.Regexp, error) {
+	sb := strings.Builder{}
+	sb.WriteString(`\A(?:`)
+	for i, nodeNamePattern := range nodeNamePatterns {
+		if i > 0 {
+			sb.WriteByte('|')
+		}
+		if err := appendNodeNamePatternRegexp(&sb, nodeNamePattern); err != nil {
 			return nil, err
 		}
 	}
