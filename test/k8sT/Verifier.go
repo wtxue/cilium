@@ -57,7 +57,7 @@ var _ = Describe("K8sVerifier", func() {
 		err := kubectl.WaitForSinglePod(helpers.DefaultNamespace, podName, helpers.HelperTimeout)
 		Expect(err).Should(BeNil(), fmt.Sprintf("%s pod not ready after timeout", podName))
 
-		res = kubectl.ExecPodCmd(helpers.DefaultNamespace, podName, "make -C /cilium/bpf clean V=0")
+		res = kubectl.ExecPodCmd(helpers.DefaultNamespace, podName, "make -C bpf clean V=0")
 		res.ExpectSuccess("Failed to clean up bpf/ tree")
 	})
 
@@ -72,9 +72,9 @@ var _ = Describe("K8sVerifier", func() {
 
 	It("Runs the kernel verifier against Cilium's BPF datapath", func() {
 		By("Building BPF objects from the tree")
-		res := kubectl.ExecPodCmd(helpers.DefaultNamespace, podName, "make -C /cilium/bpf V=0")
+		res := kubectl.ExecPodCmd(helpers.DefaultNamespace, podName, "make -C bpf V=0")
 		res.ExpectSuccess("Expected compilation of the BPF objects to succeed")
-		res = kubectl.ExecPodCmd(helpers.DefaultNamespace, podName, "make -C /cilium/tools/maptool/")
+		res = kubectl.ExecPodCmd(helpers.DefaultNamespace, podName, "make -C tools/maptool/")
 		res.ExpectSuccess("Expected compilation of maptool to succeed")
 
 		if helpers.RunsOn419Kernel() {
@@ -83,7 +83,7 @@ var _ = Describe("K8sVerifier", func() {
 			// loads these two programs), rejects global data.
 			By("Remove global data section")
 			for _, prog := range []string{"bpf/sockops/bpf_sockops.o", "bpf/sockops/bpf_redir.o"} {
-				cmd := "llvm-objcopy --remove-section=.debug_info --remove-section=.BTF --remove-section=.data /cilium/%s /cilium/%s"
+				cmd := "llvm-objcopy --remove-section=.debug_info --remove-section=.BTF --remove-section=.data %s %s"
 				res := kubectl.ExecPodCmd(helpers.DefaultNamespace, podName,
 					fmt.Sprintf(cmd, prog, prog))
 				res.ExpectSuccess(fmt.Sprintf("Expected deletion of object file sections from %s to succeed.", prog))
@@ -91,7 +91,7 @@ var _ = Describe("K8sVerifier", func() {
 		}
 
 		By("Running the verifier test script")
-		cmd := fmt.Sprintf("/cilium/test/%s", script)
+		cmd := fmt.Sprintf("test/%s", script)
 		res = kubectl.ExecPodCmd(helpers.DefaultNamespace, podName, cmd)
 		res.ExpectSuccess("Expected the kernel verifier to pass for BPF programs")
 	})

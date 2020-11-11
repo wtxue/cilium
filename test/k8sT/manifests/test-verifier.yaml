@@ -6,6 +6,7 @@ spec:
   containers:
   - name: cilium-builder
     image: quay.io/cilium/cilium-builder:pr_pchaigno_pull-llvm-objcopy-in-cilium-builder
+    workingDir: /cilium
     command: ["sleep"]
     args:
       - "1000h"
