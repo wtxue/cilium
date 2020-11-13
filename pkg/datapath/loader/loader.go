@@ -156,6 +156,15 @@ func patchHostNetdevDatapath(ep datapath.Endpoint, objPath, dstPath, ifName stri
 		return err
 	}
 
+	if !option.Config.EnableHostLegacyRouting ||
+		option.Config.DatapathMode == datapathOption.DatapathModeIpvlan {
+		const SecctxFromIpcacheEnabled = uint32(2)
+		opts["SECCTX_FROM_IPCACHE"] = SecctxFromIpcacheEnabled
+	} else {
+		const SecctxFromIpcacheDisabled = uint32(1)
+		opts["SECCTX_FROM_IPCACHE"] = SecctxFromIpcacheDisabled
+	}
+
 	if option.Config.EnableNodePort && nodePortIPv4Addrs != nil && nodePortIPv6Addrs != nil {
 		opts["NATIVE_DEV_IFINDEX"] = ifIndex
 		if option.Config.EnableIPv4 {
